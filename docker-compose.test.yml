@@ -1,0 +1,48 @@
+# =========================================================
+# Compose de testes automáticos (usado no CI)
+# Sobe api + redis e roda os testes contra a API de verdade.
+#
+# docker compose -f docker-compose.test.yml up --build \
+#   --abort-on-container-exit --exit-code-from tests
+# =========================================================
+
+services:
+  api:
+    build: .
+    image: calculadora-api
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - testes
+
+  # Redis descartável: sem volume, cada execução começa do zero
+  redis:
+    image: redis:7-alpine
+    networks:
+      - testes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Roda os testes (node:test, já vem no Node, sem instalar nada)
+  tests:
+    image: node:22-alpine
+    working_dir: /tests
+    volumes:
+      - ./tests:/tests:ro
+    environment:
+      BASE_URL: http://api:3000
+    command: ["node", "--test"]
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - testes
+
+networks:
+  testes:

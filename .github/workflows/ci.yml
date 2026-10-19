@@ -1,0 +1,19 @@
+# CI: a cada push/PR sobe o compose de testes e falha se algum teste falhar
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rodar testes com Docker Compose
+        run: docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from tests
+
+      - name: Limpar containers
+        if: always()
+        run: docker compose -f docker-compose.test.yml down -v

@@ -1,0 +1,41 @@
+# =========================================================
+# Dockerfile - Calculadora Web (versão para o LabEx)
+# O LabEx estava SEM acesso à internet (Docker Hub, AWS e npm
+# deram timeout), então usei uma imagem que já existia no
+# ambiente: docker/getting-started (nginx sobre Alpine, 47 MB).
+# =========================================================
+
+# ---------- ESTÁGIO 1: preparação (builder) ----------
+# Usa a mesma imagem Alpine só para montar/validar os arquivos
+FROM docker/getting-started AS builder
+
+WORKDIR /build
+
+# Copia apenas os arquivos do site
+COPY index.html health ./
+
+# Valida que o HTML existe e não está vazio (falha o build se estiver)
+# e gera uma versão pré-comprimida (.gz) para o nginx servir mais rápido
+RUN test -s index.html && gzip -9 -k index.html
+
+
+# ---------- ESTÁGIO 2: execução (runtime) ----------
+# Imagem final leve: só nginx + os arquivos prontos
+FROM docker/getting-started
+
+# Remove o site de exemplo que vem na imagem (menos arquivos = imagem menor)
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copia do estágio builder SÓ o resultado final
+COPY --from=builder /build/ /usr/share/nginx/html/
+
+# Porta padrão do nginx
+EXPOSE 80
+
+# O Docker verifica sozinho se o site está respondendo
+# (wget já vem no Alpine, não precisa instalar nada)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost/health || exit 1
+
+# nginx em primeiro plano como processo principal (PID 1)
+CMD ["nginx", "-g", "daemon off;"]

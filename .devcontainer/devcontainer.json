@@ -1,8 +1,0 @@
-{
-  "name": "Calculadora Docker Compose",
-  "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "forwardPorts": [8080],
-  "portsAttributes": {
-    "8080": { "label": "Calculadora", "onAutoForward": "openBrowser" }
-  }
-}
